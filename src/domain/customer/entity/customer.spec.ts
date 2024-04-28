@@ -1,3 +1,9 @@
+import EventDispatcher from "../../@shared/event/event-dispatcher";
+import CustomerAdressChangedEvent from "../event/customer-adress-changed";
+import CustomerCreatedEvent from "../event/customer-created.event";
+import EnviaConsoleLogHandler from "../event/handler/envia-console-log.handler";
+import EnviaConsoleLog1Handler from "../event/handler/envia-console-log1.handler";
+import EnviaConsoleLog2Handler from "../event/handler/envia-console-log2.handler";
 import Address from "../value-object/address";
 import Customer from "./customer";
 
@@ -59,5 +65,46 @@ describe("Customer unit tests", () => {
 
     customer.addRewardPoints(10);
     expect(customer.rewardPoints).toBe(20);
+  });
+
+  it("should notify all customer created event handlers", () => {
+    const eventHandler1 = new EnviaConsoleLog1Handler();
+    const eventHandler2 = new EnviaConsoleLog2Handler();
+    const dispacher = new EventDispatcher();
+    const spyEventHandler1 = jest.spyOn(eventHandler1, 'handle');
+    const spyEventHandler2 = jest.spyOn(eventHandler2, 'handle');
+
+    dispacher.register(CustomerCreatedEvent.name, eventHandler1);
+    dispacher.register(CustomerCreatedEvent.name, eventHandler2);
+
+    new Customer("1", "Customer 1", dispacher);
+
+    expect(spyEventHandler1).toHaveBeenCalled()
+    expect(spyEventHandler2).toHaveBeenCalled()
+  });
+
+  it("should notify customer address changed event handler", () => {
+    
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-04-27'));
+
+    const handler = new EnviaConsoleLogHandler();
+    const dispacher = new EventDispatcher();
+    const spyHandler = jest.spyOn(handler, 'handle');
+
+    dispacher.register(CustomerAdressChangedEvent.name, handler);
+
+    const customer = new Customer("1", "Customer 1", dispacher);
+    const address = new Address("Street 1", 1, "01", "City 1");
+    customer.changeAddress(address);
+
+    expect(spyHandler).toHaveBeenCalledWith({
+      dataTimeOccurred: new Date('2024-04-27'),
+      eventData: {
+        id: customer.id,
+        name: customer.name,
+        address
+      }
+    })
   });
 });
